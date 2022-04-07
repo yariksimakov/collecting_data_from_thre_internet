@@ -87,7 +87,7 @@ def create_vacancys_list(data_vacancys):
 
 
 vacancys_list = []
-for val in range(page-1):
+for val in range(page):
     dom = turn_pages(base_url, position, page=val)
     tag_vacancys = dom.find_all('div', {'class': 'vacancy-serp-item'})
     vacancys_list.extend(create_vacancys_list(tag_vacancys))
