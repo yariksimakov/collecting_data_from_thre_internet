@@ -16,120 +16,97 @@ client = MongoClient('127.0.0.1', 27017)
 db = client['news']
 collection_mail = db.news_mail
 collection_lenta = db.news_lenta
-
-url = 'https://news.mail.ru/'
 headers = {
     'user-agent': 'Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.74 Safari/537.36'}
 
 
-def request_and_write_response(url, headers, file_name):
-    response = rq.get(url, headers=headers)
-    with open(f'{file_name}.html', 'w', encoding='utf-8') as file:
-        file.write(response.text)
+# def request_and_write_response(url, headers, file_name):
+#     response = rq.get(url, headers=headers)
+#     with open(f'{file_name}.html', 'w', encoding='utf-8') as file:
+#         file.write(response.text)
+#
+#
+# def open_file_for_get_html(file_name):
+#     with open(f'{file_name}.html', 'r', encoding='utf-8') as file:
+#         news_html = file.read()
+#     return news_html
 
 
-def open_file_for_get_html(file_name):
-    with open(f'{file_name}.html', 'r', encoding='utf-8') as file:
-        news_html = file.read()
-    return news_html
+# news mail
+url = 'https://news.mail.ru/'
+
+def get_data(dom_html, parser):
+    return dom_html.xpath(parser)
 
 
-def from_string_get_data(news_html, parser_for_object, parser_for_link):
+def from_string_and_get_dict(news_html, **kwargs):
     dom = html.fromstring(news_html)
-    object_list = dom.xpath(parser_for_object)
-    link_object_list = dom.xpath(parser_for_link)
-    return object_list, link_object_list
+    temporary_dict = {}
+
+    for key in kwargs.keys():
+        temporary_dict[key] = get_data(dom, kwargs[key])
+    return temporary_dict
 
 
-def from_string_get_time_for_mail(news_html, parser):
-    dom = html.fromstring(news_html)
-    time_object_list = dom.xpath(parser)
-    return time_object_list
+def get_html_page(url_path):
+    response = rq.get(url_path, headers=headers)
+    return response.text
 
 
-def generate_list_of_dict_for_db(site_name, news_list, link_list, time_list):
-    result_list = []
-
-    if len(news_list) == len(link_list) and len(link_list) == len(time_list):
-        for index in range(len(news_list)):
-            temporary_dict = {}
-            temporary_dict['news'] = news_list[index]
-            temporary_dict['site name'] = site_name
-            temporary_dict['link for news'] = link_list[index]
-            temporary_dict['time publication '] = time_list[index]
-            result_list.append(temporary_dict)
-    else:
-        raise IndexError('You have entered  asymmetric length lists')
-
-    return result_list
+# //table//a/@href - link for base news
+# One the page
+# //span[@datetime]/@datetime - time
+# //h1/text()' - news
+# //a[contains(@class, "breadcrumbs__link")]/span/text() - source
+# //a[contains(@class, "breadcrumbs__link")]/@href - link to source
 
 
-# news.mail.ru - https://news.mail.ru/
-# base news
-# //table//td[position()<3]//span/span - text
-# //table//td[position()<3]//a/@href - link
-# //div[contains(@class, " breadcrumbs_article breadcrumbs_multiline")]/span[1]/span - time
+html_base_page = get_html_page(url)
+link_base = from_string_and_get_dict(html_base_page, link_with_base_page='//table//a/@href')
+# pprint(link_base)
 
 
-# request_and_write_response(url, headers, 'mail_news')
+result_list_for_mail = []
+for index in range(len(link_base['link_with_base_page'])):
+    html_page = get_html_page(link_base['link_with_base_page'][index])
+    pages_news = from_string_and_get_dict(html_page,
+                                          news='//h1/text()',
+                                          source='//a[contains(@class, "breadcrumbs__link")]/span/text()',
+                                          link_to_source='//a[contains(@class, "breadcrumbs__link")]/@href',
+                                          time_publication='//span[@datetime]/@datetime')
+    result_list_for_mail.append(pages_news)
 
-# I get news and i get links for news
-mail_news_html = open_file_for_get_html('mail_news')
-news_object_mail, link_object_mail = from_string_get_data(mail_news_html, '//table//td[position()<3]//span/span/text()',
-                                                          '//table//td[position()<3]//a/@href')
-
-# I get date time of news
-time_list_mail = []
-for link in link_object_mail:
-    response_html = rq.get(link_object_mail[0]).text
-    time_object_mail = from_string_get_time_for_mail(response_html,
-                                                     '//div[contains(@class, " breadcrumbs_article breadcrumbs_multiline")]/span[1]//span[contains(@class, "note__text")]/@datetime')
-    time_list_mail.extend(time_object_mail)
-
-# I processing news for data base
-news_object_mail[0] = news_object_mail[0] + '. ' + news_object_mail[1]
-news_object_mail.pop(1)
-
-print(news_object_mail, link_object_mail, time_list_mail, sep='\n')
-print(len(news_object_mail), len(link_object_mail), len(time_list_mail), sep='\n')
-
-list_of_dict_for_db_mail = generate_list_of_dict_for_db('mail_news', news_object_mail, link_object_mail, time_list_mail)
+pprint(result_list_for_mail)
 
 # news lenta
-# //div[@class="topnews"]/div[@class="topnews__column"]//h3 - text
-# //div[@class="topnews"]/div[@class="topnews__column"]//div[@class="card-big__info"]/time - time for h3
-# //div[@class="topnews"]/div[@class="topnews__column"]//div[@class="card-mini__info"]/time - time
-# //div[@class="topnews"]/div[@class="topnews__column"]//span - text
-# //div[@class="topnews"]/div[@class="topnews__column"]//a - link
+url = 'https://lenta.ru/'
 
-# request_and_write_response('https://lenta.ru/', headers, 'lenta')
+# //a[contains(@class,"_topnews")]/@href - link
+# //a[contains(@class,"_topnews")]//time/text() - time
+# //a[contains(@class,"_topnews")]//span
+# //a[contains(@class,"_topnews")]//h3
 
-lenta_html = open_file_for_get_html('lenta')
+response = rq.get(url, headers=headers)
+dom = html.fromstring(response.text)
 
-# I get data for first news
-dom = html.fromstring(lenta_html)
-news_object_lenta = dom.xpath('//div[@class="topnews"]/div[@class="topnews__column"]//h3/text()')
-time_list_lenta = dom.xpath(
-    '//div[@class="topnews"]/div[@class="topnews__column"]//div[@class="card-big__info"]/time/text()')
+result_list_for_lenta = []
+source = 'lenta.ru'
+for watch in dom.xpath('//a[contains(@class,"_topnews")]'):
+    temporary_dict = {}
+    temporary_dict['link_to_source'] = watch.xpath('./@href')
+    if not re.match(r'https://\w+', temporary_dict['link_to_source'][0]):
+        temporary_dict['link_to_source'] = ['https://lenta.ru' + temporary_dict['link_to_source'][0]]
 
-object_list_lenta_2, link_object_lenta = from_string_get_data(lenta_html,
-                                                              '//div[@class="topnews"]/div[@class="topnews__column"]//span/text()',
-                                                              '//div[@class="topnews"]/div[@class="topnews__column"]//a/@href')
-time_list_2 = dom.xpath(
-    '//div[@class="topnews"]/div[@class="topnews__column"]//div[@class="card-mini__info"]/time/text()')
+    temporary_dict['news'] = watch.xpath('.//span/text()')
+    if not watch.xpath('.//span/text()'):
+        temporary_dict['news'] = watch.xpath('.//h3/text()')
 
-# I processing link for news of lenta
-news_object_lenta.extend(object_list_lenta_2)
-time_list_lenta.extend(time_list_2)
-for index, val in enumerate(link_object_lenta):
-    bool_link = re.match(r'https://\w+', val)
-    if not bool_link:
-        link_object_lenta[index] = 'https://lenta.ru' + val
+    temporary_dict['time_publication'] = watch.xpath('.//time/text()')
+    temporary_dict['source'] = [source]
+    result_list_for_lenta.append(temporary_dict)
 
-print(news_object_lenta, link_object_lenta, time_list_lenta, sep='\n')
-print(len(news_object_lenta), len(link_object_lenta), len(time_list_lenta), sep='\n')
+# pprint(result_list_for_lenta)
 
-list_of_dict_for_db_lenta = generate_list_of_dict_for_db('lenta', news_object_lenta, link_object_lenta, time_list_lenta)
 
 collection_lenta.delete_many({})
 collection_mail.delete_many({})
@@ -140,11 +117,9 @@ def insert_into_db(collection, data_list):
         collection.insert_one(val)
 
 
-insert_into_db(collection_mail, list_of_dict_for_db_mail)
-insert_into_db(collection_lenta, list_of_dict_for_db_lenta)
+insert_into_db(collection_mail, result_list_for_mail)
+insert_into_db(collection_lenta, result_list_for_lenta)
 
 pprint(list(collection_lenta.find({})))
 pprint(list(collection_mail.find({})))
-# <pymongo.cursor.Cursor object at 0x0000003E99BC21C0>
-# <pymongo.cursor.Cursor object at 0x0000003E99BC21C0>
 print(len(list(collection_lenta.find({}))), len(list(collection_mail.find({}))), sep='\t')
