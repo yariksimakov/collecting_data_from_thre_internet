@@ -10,13 +10,11 @@ from pymongo.errors import DuplicateKeyError
 import pandas as pd
 import json
 
-
 client = MongoClient('localhost', 27017)
 db = client['vacancys_database']
 collection = db.vacancys
 
-
-vacancys_df = pd.read_csv('vacancies_to_work.csv')
+vacancys_df = pd.read_csv('../second_lesson/vacancies_to_work.csv')
 parser = vacancys_df.to_json(orient='records')
 vacancys_json = json.loads(parser)
 
@@ -33,16 +31,18 @@ def insert_to_collection(param_dict):
             except DuplicateKeyError('Duplicate key error') as err:
                 pprint(err)
 
+
 insert_to_collection(vacancys_json)
 
 param_salary = int(input('Please enter a number: '))
+
+
 def show_db_by_salary(param):
     for val in collection.find({'$or': [
-                                {'salary_min': {'$gt': param}},
-                                {'salary_max': {'$lte': param}},
-                                {'salary_max': {'gt': param}}
-                            ]}):
+        {'salary_min': {'$gt': param}},
+        {'salary_max': {'gt': param}}
+    ]}):
         pprint(val)
 
-show_db_by_salary(param_salary)
 
+show_db_by_salary(param_salary)
