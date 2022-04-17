@@ -10,9 +10,14 @@ from selenium.webdriver.common.by import By
 from selenium import webdriver
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.common.action_chains import ActionChains
+from pymongo import MongoClient
 from pprint import pprint
+import re
 import time
+
+client = MongoClient('localhost', 27017)
+db = client['letters_of_mail']
+collection = db.letters
 
 s = Service('chromedriver.exe')
 driver = webdriver.Chrome(service=s)
@@ -26,7 +31,6 @@ wait.until(EC.presence_of_element_located((By.XPATH, '//iframe[@class="ag-popup_
 iframe = driver.find_element(By.XPATH, '//iframe[@class="ag-popup__frame__layout__iframe"]')
 driver.switch_to.frame(iframe)
 
-
 wait = WebDriverWait(driver, 25)
 input_username = wait.until(EC.presence_of_element_located((By.NAME, 'username')))
 
@@ -34,45 +38,55 @@ input_username = wait.until(EC.presence_of_element_located((By.NAME, 'username')
 input_username.send_keys('study.ai_172')
 input_username.submit()
 
-
 wait = WebDriverWait(driver, 25)
 input_password = wait.until(EC.presence_of_element_located((By.NAME, 'password')))
-time.sleep(1) # Я так сделал чтобы не было ошибки ElementNotInteractableException - я так и не понял почему она возникает
+time.sleep(
+    1)  # Я так сделал чтобы не было ошибки ElementNotInteractableException - я так и не понял почему она возникает
 # input_password = driver.find_element(By.NAME, 'password')
-input_password.send_keys('NextPassword172#') # Error - selenium.common.exceptions.ElementNotInteractableException: Message: element not interactable
+input_password.send_keys('NextPassword172#')
 input_password.submit()
 
-# driver.find_elements(By.XPATH, '//div[contains(@class, "ReactVirtualized__Grid__innerScrollContainer")]/a')
-# scrolling = ActionChains(driver)
-# scrolling.move_to_element(elem_letter[-1])
-# scrolling.perform()
-
-# driver.find_elements(By.XPATH, '//div[contains(@class, "ReactVirtualized__Grid")]/a')
-
-link_list = []
-data_id_set = set()
+link_of_letter = set()
 while True:
-    # wait.until(EC.presence_of_all_elements_located((By.XPATH, '//div[contains(@class, "ReactVirtualized__Grid__innerScrollContainer")]/a')))
-    time.sleep(4)
-    elem_letters = wait.until(EC.presence_of_all_elements_located((By.XPATH, '//div[contains(@class, "ReactVirtualized__Grid__innerScrollContainer")]/a')))
-    driver.execute_script('arguments[0].scrollIntoView(true);', elem_letters[-1]) # Message: stale element reference: element is not attached to the page document
+    wait.until(EC.presence_of_all_elements_located(
+        (By.XPATH, '//div[contains(@class, "ReactVirtualized__Grid__innerScrollContainer")]/a')))
+    elem_have_link = wait.until(EC.text_to_be_present_in_element_attribute(
+        (By.XPATH, '//div[contains(@class, "ReactVirtualized__Grid__innerScrollContainer")]/a'), 'href', 'https:'))
+    if not elem_have_link:
+        continue
+
     time.sleep(1)
+    elem_letters = wait.until(EC.presence_of_all_elements_located(
+        (By.XPATH, '//div[contains(@class, "ReactVirtualized__Grid__innerScrollContainer")]/a')))
     for elem in elem_letters:
-        elem_data_id = elem.get_attribute('data-id') # Message: stale element reference: element is not attached to the page document
         elem_href = elem.get_attribute('href')
+        link_of_letter.add(elem_href)
 
-        if elem_data_id not in data_id_set:
-            data_id_set.add(elem_data_id)
-            link_list.append(elem_href)
-
-    if len(link_list) == 20:
+    driver.execute_script('arguments[0].scrollIntoView(true)', elem_letters[-1])
+    if len(link_of_letter) >= 20:
         break
 
-
-pprint(link_list)
-
-# elem_letter.get_attribute('href')
-# elem_letter[0].text
-# elem_letter[0].find_element(By.XPATH, './/div[contains(@class, "DFBrIJS_DFBrILW")]').text
+# pprint(link_of_letter)
 
 
+data_letters = []
+for i, letter in enumerate(link_of_letter):
+    data_dict = {}
+    driver.get(letter)
+    elem_text = wait.until(EC.presence_of_element_located((By.XPATH, '//div[contains(@class, "thread")]')))
+    text = elem_text.text.split('\n', 2)
+    data_dict['header'] = text[0]
+    data_dict['time_get'] = re.findall(r'[а-яё]+, \d+:\d+', text[1], re.I)[0]
+    data_dict['author'] = text[1].replace(data_dict['time_get'], '')
+    data_dict['text'] = text[2].replace('\nОтветить\nПереслать\nОтписаться от рассылки\nПрочитать письмо', '')
+    data_letters.append(data_dict)
+    if i == 11:
+        break
+# text = driver.find_element(By.XPATH, '//div[contains(@class, "thread")]').text
+# pprint(data_letters)
+
+
+for letter in data_letters:
+    collection.insert_one(letter)
+
+pprint(list(collection.find({})))
