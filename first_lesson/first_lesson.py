@@ -21,5 +21,5 @@ for value in dict_repos:
 print(repos_names)
 
 # Save got format json in file
-with open('repos_dict.json', 'w') as file:
+with open('../third_lesson/repos_dict.json', 'w') as file:
     json.dump(dict_repos, file)
