@@ -7,17 +7,13 @@
 # useful for handling different item types with a single interface
 from itemadapter import ItemAdapter
 from pymongo import MongoClient
-<<<<<<< HEAD
 from pprint import pprint
 import re
-=======
->>>>>>> origin/sixth_lesson
 
 
 class JobparserPipeline:
     def __init__(self):
         client = MongoClient('localhost', 27017)
-<<<<<<< HEAD
         self.mongo_data_base = client.vacancy_database
 
     def process_item(self, item, spider):
@@ -27,18 +23,12 @@ class JobparserPipeline:
         elif spider.name == 'sjru':
             item['min_salary'], item['max_salary'], item['currency'] = self.process_salary_for_sjru(item['salary'])
             del item['salary']
-=======
-        self.mongo_data_base = client.vacancy
 
-    def process_item(self, item, spider):
-        item['min_salary'], item['max_salary'], item['currency'] = self.process_salary(item['salary'])
-        del item.salary
->>>>>>> origin/sixth_lesson
         collection = self.mongo_data_base[spider.name]
         collection.insert_one(item)
+        # print(spider.name)
         return item
 
-<<<<<<< HEAD
     def process_salary_for_hhru(self, salary):
         min_salary = None
         max_salary = None
@@ -58,6 +48,7 @@ class JobparserPipeline:
 
         return min_salary, max_salary, currency
 
+
     def process_salary_for_sjru(self, salary):
         min_salary = None
         max_salary = None
@@ -68,6 +59,7 @@ class JobparserPipeline:
                 min_salary = re.findall(r'\d+\s\d+', salary[2])[0]
             else:
                 max_salary = re.findall(r'\d+\s\d+', salary[2])[0]
+
         elif len(salary) == 9: # ['200\xa0000', '\xa0', '—', '\xa0', '280\xa0000', '\xa0', 'руб.', '/', 'месяц']
             currency = re.findall(r'(\w{3}).$', salary[6])[0]
             min_salary = salary[0]
@@ -75,7 +67,3 @@ class JobparserPipeline:
 
         return min_salary, max_salary, currency
 
-=======
-    def process_salary(self, salary):
-        return 1,2,3
->>>>>>> origin/sixth_lesson

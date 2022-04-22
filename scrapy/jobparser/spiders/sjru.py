@@ -24,7 +24,6 @@ class SjruSpider(scrapy.Spider):
         for link in links:
             yield response.follow(link, callback=self.link_parser)
 
-
     def link_parser(self, response:HtmlResponse):
         name = response.xpath('//h1/text()').get()
         salary = response.xpath('//span[contains(@class, " _2nJZK")]//text()').getall()
