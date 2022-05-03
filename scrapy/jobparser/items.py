@@ -24,3 +24,12 @@ class JobparserItem(scrapy.Item):
     # max_salary = scrapy.Field()
     # currency = scrapy.Field()
 
+class InstaparserItem(scrapy.Item):
+    # define the fields for your item here like:
+    _id = scrapy.Field()
+    profile_name = scrapy.Field() # This is user data
+    user_classification = scrapy.Field()
+    follow_id = scrapy.Field()
+    follow_name = scrapy.Field()
+    follow_username = scrapy.Field()
+    follow_photo = scrapy.Field()
