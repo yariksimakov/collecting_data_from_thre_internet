@@ -8,6 +8,7 @@
 #     https://docs.scrapy.org/en/latest/topics/spider-middleware.html
 
 BOT_NAME = 'jobparser'
+IMAGES_STORE = 'photos'
 
 SPIDER_MODULES = ['jobparser.spiders']
 NEWSPIDER_MODULE = 'jobparser.spiders'
@@ -21,12 +22,12 @@ USER_AGENT = 'Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML
 ROBOTSTXT_OBEY = False
 
 # Configure maximum concurrent requests performed by Scrapy (default: 16)
-CONCURRENT_REQUESTS = 16
+CONCURRENT_REQUESTS = 8
 
 # Configure a delay for requests for the same website (default: 0)
 # See https://docs.scrapy.org/en/latest/topics/settings.html#download-delay
 # See also autothrottle settings and docs
-DOWNLOAD_DELAY = .5
+DOWNLOAD_DELAY = .9
 # The download delay setting will honor only one of:
 #CONCURRENT_REQUESTS_PER_DOMAIN = 16
 #CONCURRENT_REQUESTS_PER_IP = 16
@@ -38,10 +39,10 @@ COOKIES_ENABLED = True
 #TELNETCONSOLE_ENABLED = False
 
 # Override the default request headers:
-#DEFAULT_REQUEST_HEADERS = {
-#   'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-#   'Accept-Language': 'en',
-#}
+# DEFAULT_REQUEST_HEADERS = {
+#    'cookie': 'disp_plp_promo_ab=B; ggr-widget-test=1; flowbox-gallery-pdp=1; disp_react_aa=2; iap.uid=f94c67f52255404f894312ce8dd25e87; cookie_accepted=true; fromRegion=34; _regionID=506; lastConfirmedRegionID=506; user-geolocation=0%2C0; qrator_ssid=1650790604.211.bbIVdfEjwylHflhm-evbmq5h2vhlkdd1ik7k4bbsaiknims3q',
+# }
+
 
 # Enable or disable spider middlewares
 # See https://docs.scrapy.org/en/latest/topics/spider-middleware.html
@@ -64,7 +65,9 @@ COOKIES_ENABLED = True
 # Configure item pipelines
 # See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
 ITEM_PIPELINES = {
-   'jobparser.pipelines.JobparserPipeline': 300,
+   # 'jobparser.pipelines.JobparserPipeline': 300,
+   'jobparser.pipelines.CastoramaPipeline': 300,
+   'jobparser.pipelines.CastoramaPhotosPipelin': 200,
 }
 
 

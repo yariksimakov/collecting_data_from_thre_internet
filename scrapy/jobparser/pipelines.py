@@ -5,9 +5,12 @@
 
 
 # useful for handling different item types with a single interface
+from scrapy.utils.python import to_bytes
+import scrapy
+import hashlib
 from itemadapter import ItemAdapter
 from pymongo import MongoClient
-from pprint import pprint
+from scrapy.pipelines.images import ImagesPipeline
 import re
 
 
@@ -48,7 +51,6 @@ class JobparserPipeline:
 
         return min_salary, max_salary, currency
 
-
     def process_salary_for_sjru(self, salary):
         min_salary = None
         max_salary = None
@@ -67,3 +69,36 @@ class JobparserPipeline:
 
         return min_salary, max_salary, currency
 
+
+class CastoramaPipeline:
+    def __init__(self):
+        client = MongoClient('localhost', 27017)
+        self.mongo_database = client.products
+
+    def process_item(self, item, spider):
+        print(item)
+        collection = self.mongo_database[spider.product]
+        collection.insert_one(item)
+        return item
+
+
+class CastoramaPhotosPipelin(ImagesPipeline):
+    def get_media_requests(self, item, info):
+        photos = item['photos']
+        if photos:
+            for img in photos:
+                try:
+                    yield scrapy.Request(img)
+                except Exception as err:
+                    print(err)
+        return item
+
+    def item_completed(self, results, item, info):
+        item['photos'] = [itm[1] for itm in results if itm[0]]
+        return item
+
+    def file_path(self, request, response=None, info=None, *, item=None):
+        # print(request)
+        image_guid = hashlib.sha1(to_bytes(request.url)).hexdigest()
+        name_directory = item['product_name']
+        return f'full/{name_directory}/{image_guid}.jpg'
