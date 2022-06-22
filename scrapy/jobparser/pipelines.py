@@ -102,3 +102,39 @@ class CastoramaPhotosPipelin(ImagesPipeline):
         image_guid = hashlib.sha1(to_bytes(request.url)).hexdigest()
         name_directory = item['product_name']
         return f'full/{name_directory}/{image_guid}.jpg'
+
+
+class InstaparserPipeline:
+    def __init__(self):
+        client = MongoClient('localhost', 27017)
+        self.mongo_database = client.instagram
+
+    def process_item(self, item, spider):
+        # print(item)
+        collection = self.mongo_database[item['profile_name']]
+        del item['profile_name']
+        collection.insert_one(item)
+        return item
+
+class InstagramPhotosPipeline(ImagesPipeline):
+    def get_media_requests(self, item, info):
+        photo = item['follow_photo']
+        if photo:
+            try:
+                yield scrapy.Request(photo)
+            except Exception as err:
+                print(err)
+
+    def file_path(self, request, response=None, info=None, *, item=None):
+        # image_guid = hashlib.sha1(to_bytes(request.url)).hexdigest()
+        name_directory = item['profile_name']
+        follow_username = item['follow_username']
+        return f'full/{name_directory}/{follow_username}.jpg'
+
+
+# {'follow_id': 4496800393,
+#  'follow_name': 'Anastasia Belova',
+#  'follow_photo': 'https://instagram.frix4-1.fna.fbcdn.net/v/t51.2885-19/246762978_4460381927370741_392426189970097762_n.jpg?stp=dst-jpg_s150x150&_nc_ht=instagram.frix4-1.fna.fbcdn.net&_nc_cat=109&_nc_ohc=7WgXGN1xSZsAX81cjik&edm=APQMUHMBAAAA&ccb=7-4&oh=00_AT9_HpHKcwPzwo-s3fC8YlR-Clff9yatrmKYDLZ0d7BWJg&oe=62781F93&_nc_sid=e5d0a6',
+#  'follow_username': 'anastasiatrue',
+#  'profile_name': 'geekbrains.ru',
+#  'user_classification': 'follower'}
